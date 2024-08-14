@@ -1,10 +1,11 @@
 package com.example.user.controllers;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
-import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,69 +14,69 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.user.exceptions.user.AuthenticationException;
+import com.example.user.mappers.UserMapper;
 import com.example.user.models.LoginDTO;
 import com.example.user.models.User;
-import com.example.user.models.UserDTO;
-import com.example.user.repositories.UserRepository;
+import com.example.user.models.UserCreateDTO;
+import com.example.user.models.UserGetResponseDTO;
+import com.example.user.services.UserService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/user")
+@CrossOrigin("*")
 @RequiredArgsConstructor
 public class UserController {
-    private final UserRepository userRepository;
+    private final UserService userService;
+    private final UserMapper userMapper = UserMapper.INSTANCE;
 
     @GetMapping("/{id}")
-    public ResponseEntity<Optional<User>> getUserById(@PathVariable int id) {
-        Optional<User> user = userRepository.findById(id);
+    public UserGetResponseDTO getUserById(@PathVariable int id) {
+        User user = userService.getUserById(id);
 
-        if (user.isPresent()) 
-            return ResponseEntity.ok(user);
-        else 
-            return ResponseEntity.notFound().build();
+        return userMapper.userToUserGetResponseDTO(user);
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> allUsers = userRepository.findAll();
+    public List<UserGetResponseDTO> getAllUsers() {
+        List<User> allUsers = userService.getAllUsers();
     
-        return ResponseEntity.ok(allUsers);
+        return allUsers.stream().map(userMapper::userToUserGetResponseDTO).collect(Collectors.toList());
+    }
+
+    @GetMapping("/pages")
+    public List<User> listUsers(Pageable pageable) {
+        return userService.listUsers(pageable).getContent();
     }
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody LoginDTO data) {
-        Optional<User> userOptional = userRepository.findByEmail(data.email());
-
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            if(BCrypt.checkpw(data.password(), user.getPassword()))
-                return ResponseEntity.ok("Login efetuado com sucesso");
-            else
-                return ResponseEntity.status(401).body("Senha incorreta");
-        } else
-            return ResponseEntity.status(401).body("Usuário não encontrado");
+        try {
+            userService.login(data);
+            return ResponseEntity.ok("Login Efetuado");
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
     }
 
     @PostMapping
-    public ResponseEntity<Void> createUser(@RequestBody UserDTO data) {
-        User newUser = new User();
-        newUser.setNome(data.nome());
-        newUser.setIdade(data.idade());
-        newUser.setEmail(data.email());
-        newUser.setPassword(BCrypt.hashpw(data.password(), BCrypt.gensalt()));
-        userRepository.save(newUser);
+    public UserGetResponseDTO createUser(@RequestBody @Valid UserCreateDTO data) {
+        User newUser = userService.createUser(data);
 
-        return ResponseEntity.ok().build();
+        return userMapper.userToUserGetResponseDTO(newUser);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable int id) {
-        Optional<User> user = userRepository.findById(id);
+    public ResponseEntity<String> deleteUser(@PathVariable int id) {
+        boolean deleted = userService.deleteUser(id);
 
-        if (user.isPresent()) {
-            userRepository.deleteById(id);
-            return ResponseEntity.ok().build();
+        if(deleted) {
+            return ResponseEntity.ok("Usuário de Id: " + id + " foi deletado com sucesso!");
         } else
             return ResponseEntity.notFound().build();
     }

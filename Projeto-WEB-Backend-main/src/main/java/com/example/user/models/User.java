@@ -1,11 +1,12 @@
 package com.example.user.models;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,14 +27,21 @@ public class User {
 
     private int idade;
 
-    @Email
     private String email;
 
     private String password;
 
-    public User(UserDTO data) {
-        this.id = data.id();
+    public User(UserCreateDTO data) {
         this.nome = data.nome();
         this.idade = data.idade();
+        this.email = data.email();
+        setPassword(data.password());
+    }
+
+    public static User fromDTOWithEncryptedPassword(UserCreateDTO data) {
+        User user = new User(data);
+        user.setPassword(BCrypt.hashpw(data.password(), BCrypt.gensalt()));
+        
+        return user;
     }
 }
