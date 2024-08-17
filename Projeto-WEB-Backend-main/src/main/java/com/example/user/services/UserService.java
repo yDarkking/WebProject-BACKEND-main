@@ -1,7 +1,5 @@
 package com.example.user.services;
 
-import java.util.List;
-
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,8 +30,8 @@ public class UserService {
         return userRepository.findById(id).orElseThrow(() -> new UserIdNotFoundException("Usuário de Id: " + id + " não foi encontrado!"));
     }
 
-    public List<User> findAll() {
-        List<User> allUsers = userRepository.findAll();
+    public Page<User> findAll(Pageable pageable) {
+        Page<User> allUsers = userRepository.findAll(pageable);
         if (allUsers.isEmpty()) {
             throw new NoUsersToListException("Não há usuários para listar!");
         }

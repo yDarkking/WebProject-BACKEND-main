@@ -1,5 +1,5 @@
 package com.example.user.models;
 
-public record UserGetResponseDTO(String nome, String email) {
+public record UserGetResponseDTO(String nome, String email, int id) {
     
 }

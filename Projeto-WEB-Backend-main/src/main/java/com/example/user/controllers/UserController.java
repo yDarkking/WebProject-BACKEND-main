@@ -2,7 +2,9 @@ package com.example.user.controllers;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,12 +41,11 @@ public class UserController {
     }
 
     @GetMapping
-    public List<UserGetResponseDTO> findUsers() {
-        return userService.findAll().stream()
+    public List<UserGetResponseDTO> findUsers(@PageableDefault(page = 0, size = 10) Pageable pageable) {
+        return userService.findAll(pageable).stream()
                 .map(userMapper::userToUserGetResponseDTO)
                 .collect(Collectors.toList());
     }
-
     @GetMapping("/pages")
     public List<User> listUsers(Pageable pageable) {
         return userService.listUsers(pageable).getContent();
