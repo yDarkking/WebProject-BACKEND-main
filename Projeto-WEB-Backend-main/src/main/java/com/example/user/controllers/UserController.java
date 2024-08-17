@@ -2,7 +2,6 @@ package com.example.user.controllers;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -12,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.user.exceptions.user.AuthenticationException;
@@ -34,17 +34,15 @@ public class UserController {
     private final UserMapper userMapper = UserMapper.INSTANCE;
 
     @GetMapping("/{id}")
-    public UserGetResponseDTO getUserById(@PathVariable int id) {
-        User user = userService.getUserById(id);
-
-        return userMapper.userToUserGetResponseDTO(user);
+    public UserGetResponseDTO findById(@PathVariable int id) {
+        return userMapper.userToUserGetResponseDTO(userService.findById(id));
     }
 
     @GetMapping
-    public List<UserGetResponseDTO> getAllUsers() {
-        List<User> allUsers = userService.getAllUsers();
-    
-        return allUsers.stream().map(userMapper::userToUserGetResponseDTO).collect(Collectors.toList());
+    public List<UserGetResponseDTO> findUsers() {
+        return userService.findAll().stream()
+                .map(userMapper::userToUserGetResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/pages")
@@ -52,32 +50,31 @@ public class UserController {
         return userService.listUsers(pageable).getContent();
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginDTO data) {
-        try {
-            userService.login(data);
-            return ResponseEntity.ok("Login Efetuado");
-        } catch (AuthenticationException e) {
-            return ResponseEntity.status(401).body(e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(400).body(e.getMessage());
-        }
+    @GetMapping("/login")
+public ResponseEntity<String> login(@RequestParam("email") String email, @RequestParam("password") String password) {
+    try {
+        LoginDTO data = new LoginDTO(email, password);
+        userService.login(data);
+        return ResponseEntity.ok("Login efetuado com sucesso");
+    } catch (AuthenticationException e) {
+        return ResponseEntity.status(401).body(e.getMessage());
+    } catch (RuntimeException e) {
+        return ResponseEntity.status(400).body(e.getMessage());
     }
+}
 
     @PostMapping
-    public UserGetResponseDTO createUser(@RequestBody @Valid UserCreateDTO data) {
-        User newUser = userService.createUser(data);
-
-        return userMapper.userToUserGetResponseDTO(newUser);
+    public UserGetResponseDTO save(@RequestBody @Valid UserCreateDTO data) {
+        return userMapper.userToUserGetResponseDTO(userService.save(data));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteUser(@PathVariable int id) {
-        boolean deleted = userService.deleteUser(id);
-
-        if(deleted) {
-            return ResponseEntity.ok("Usuário de Id: " + id + " foi deletado com sucesso!");
-        } else
+    public ResponseEntity<String> delete(@PathVariable int id) {
+        boolean deleted = userService.delete(id);
+        if (deleted) {
+            return ResponseEntity.ok("Usuário: " + id + " foi deletado!");
+        } else {
             return ResponseEntity.notFound().build();
+        }
     }
 }

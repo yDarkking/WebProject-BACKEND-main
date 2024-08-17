@@ -1,7 +1,6 @@
 package com.example.user.services;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.data.domain.Page;
@@ -22,22 +21,22 @@ import com.example.user.repositories.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final UserPagesRepository userPagesRepository;
 
-    public User getUserById(int id) {
+    public User findById(int id) {
         return userRepository.findById(id).orElseThrow(() -> new UserIdNotFoundException("Usuário de Id: " + id + " não foi encontrado!"));
     }
 
-    public List<User> getAllUsers() {
+    public List<User> findAll() {
         List<User> allUsers = userRepository.findAll();
-
-        if(allUsers.isEmpty())
+        if (allUsers.isEmpty()) {
             throw new NoUsersToListException("Não há usuários para listar!");
-
+        }
         return allUsers;
     }
 
@@ -45,35 +44,22 @@ public class UserService {
         return userPagesRepository.findAll(pageable);
     }
 
-    public Optional<User> login(LoginDTO data) throws AuthenticationException {
-        Optional<User> userOptional = userRepository.findByEmail(data.email());
-
-        if(userOptional.isPresent()) {
-            User user = userOptional.get();
-            if(!BCrypt.checkpw(data.password(), user.getPassword())) 
-                throw new AuthenticationException("Senha incorreta");
-        } else
-            throw new AuthenticationException("Usuário não encontrado");
-
-        return userOptional;
+    public User login(LoginDTO data) throws AuthenticationException {
+        return userRepository.findByEmail(data.email())
+                .filter(user -> BCrypt.checkpw(data.password(), user.getPassword()))
+                .orElseThrow(() -> new AuthenticationException("User not found or password incorrect"));
     }
-
     @Transactional
-    public User createUser(@Valid UserCreateDTO data) {
-        Optional<User> userOptional = userRepository.findByEmail(data.email());
-        if(userOptional.isPresent())
+    public User save(@Valid UserCreateDTO data) {
+        if (userRepository.findByEmail(data.email()).isPresent()) {
             throw new UserEmailAlreadyExistsException("Erro! Já existe um usuário com o mesmo email cadastrado");
-
-        User newUser = User.fromDTOWithEncryptedPassword(data);
-        
-        return userRepository.save(newUser);
+        }
+        return userRepository.save(User.fromDTOWithEncryptedPassword(data));
     }
 
-    public boolean deleteUser(int id) {
-        User user = getUserById(id);
-
+    public boolean delete(int id) {
+        User user = findById(id);
         userRepository.delete(user);
-
         return true;
     }
 }
