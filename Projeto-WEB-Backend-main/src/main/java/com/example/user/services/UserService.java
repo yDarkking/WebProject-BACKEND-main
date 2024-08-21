@@ -13,8 +13,8 @@ import com.example.user.exceptions.user.UserIdNotFoundException;
 import com.example.user.models.LoginDTO;
 import com.example.user.models.User;
 import com.example.user.models.UserCreateDTO;
-import com.example.user.repositories.UserPagesRepository;
-import com.example.user.repositories.UserRepository;
+import com.example.user.repositorys.UserPagesRepository;
+import com.example.user.repositorys.UserRepository;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
